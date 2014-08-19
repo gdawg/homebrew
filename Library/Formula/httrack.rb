@@ -2,8 +2,11 @@ require 'formula'
 
 class Httrack < Formula
   homepage 'http://www.httrack.com/'
-  url 'http://download.httrack.com/httrack-3.47.7.tar.gz'
-  sha1 '324ead01e873c5fdff7305ba9194d920300ba136'
+  # url: Always use mirror.httrack.com when you link to a new version
+  # of HTTrack, as link to download.httrack.com will break on next
+  # HTTrack update.
+  url 'http://mirror.httrack.com/historical/httrack-3.48.14.tar.gz'
+  sha1 'f764290fa4394bd5035bfebde6b05b2d54c662f9'
 
   def install
     ENV.deparallelize

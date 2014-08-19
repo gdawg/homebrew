@@ -2,22 +2,26 @@ require 'formula'
 
 class Netpbm < Formula
   homepage 'http://netpbm.sourceforge.net'
-  url 'svn+http://netpbm.svn.sourceforge.net/svnroot/netpbm/advanced/', :revision => 1809
-  version '10.60.05'
-  # Maintainers: Look http://netpbm.svn.sourceforge.net/viewvc/netpbm/
+  # Maintainers: Look at http://netpbm.svn.sourceforge.net/viewvc/netpbm/
   # for versions and matching revisions
+  url 'svn+http://svn.code.sf.net/p/netpbm/code/advanced/', :revision => 1809
+  version '10.60.05'
+  revision 1
 
-  head 'http://netpbm.svn.sourceforge.net/svnroot/netpbm/trunk'
+  head 'http://svn.code.sf.net/p/netpbm/code/trunk'
+
+  option :universal
 
   depends_on "libtiff"
   depends_on "jasper"
-  depends_on :libpng
+  depends_on "libpng"
 
   def install
-    system "cp", "config.mk.in", "config.mk"
-    config = "config.mk"
+    ENV.universal_binary if build.universal?
 
-    inreplace config do |s|
+    system "cp", "config.mk.in", "config.mk"
+
+    inreplace "config.mk" do |s|
       s.remove_make_var! "CC"
       s.change_make_var! "CFLAGS_SHLIB", "-fno-common"
       s.change_make_var! "NETPBMLIBTYPE", "dylib"
@@ -28,7 +32,7 @@ class Netpbm < Formula
       s.change_make_var! "PNGLIB", "-lpng"
       s.change_make_var! "ZLIB", "-lz"
       s.change_make_var! "JASPERLIB", "-ljasper"
-      s.change_make_var! "JASPERHDR_DIR", "#{HOMEBREW_PREFIX}/include/jasper"
+      s.change_make_var! "JASPERHDR_DIR", "#{Formula["jasper"].opt_include}/jasper"
     end
 
     ENV.deparallelize
@@ -41,5 +45,7 @@ class Netpbm < Formula
       man5.install Dir['man/man5/*.5']
       lib.install Dir['link/*.a']
     end
+
+    (bin/'doc.url').unlink
   end
 end

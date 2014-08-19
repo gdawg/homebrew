@@ -1,13 +1,11 @@
 require 'set'
 
 class Option
-  include Comparable
-
   attr_reader :name, :description, :flag
 
-  def initialize(name, description=nil)
+  def initialize(name, description="")
     @name, @flag = split_name(name)
-    @description = description.to_s
+    @description = description
   end
 
   def to_s
@@ -15,20 +13,22 @@ class Option
   end
   alias_method :to_str, :to_s
 
-  def to_json
-    flag.inspect
-  end
-
   def <=>(other)
+    return unless Option === other
     name <=> other.name
   end
 
-  def eql?(other)
-    other.is_a?(self.class) && hash == other.hash
+  def ==(other)
+    instance_of?(other.class) && name == other.name
   end
+  alias_method :eql?, :==
 
   def hash
     name.hash
+  end
+
+  def inspect
+    "#<#{self.class.name}: #{flag.inspect}>"
   end
 
   private
@@ -50,8 +50,29 @@ end
 class Options
   include Enumerable
 
+  attr_reader :options
+  protected :options
+
+  def self.create(array)
+    options = new
+    array.each do |e|
+      case e
+      when /^-[^-]+$/
+        e[1..-1].split(//).each { |o| options << Option.new(o) }
+      else
+        options << Option.new(e)
+      end
+    end
+    options
+  end
+
   def initialize(*args)
     @options = Set.new(*args)
+  end
+
+  def initialize_copy(other)
+    super
+    @options = other.options.dup
   end
 
   def each(*args, &block)
@@ -64,15 +85,19 @@ class Options
   end
 
   def +(o)
-    Options.new(@options + o)
+    self.class.new(@options + o)
   end
 
   def -(o)
-    Options.new(@options - o)
+    self.class.new(@options - o)
   end
 
   def &(o)
-    Options.new(@options & o)
+    self.class.new(@options & o)
+  end
+
+  def |(o)
+    self.class.new(@options | o)
   end
 
   def *(arg)
@@ -91,30 +116,9 @@ class Options
     any? { |opt| opt == o || opt.name == o || opt.flag == o }
   end
 
-  def concat(o)
-    o.each { |opt| @options << opt }
-    self
-  end
-
-  def to_a
-    @options.to_a
-  end
   alias_method :to_ary, :to_a
 
-  def self.coerce(arg)
-    case arg
-    when self then arg
-    when Option then new << arg
-    when Array
-      opts = arg.map do |_arg|
-        case _arg
-        when /^-[^-]+$/ then _arg[1..-1].split(//)
-        else _arg
-        end
-      end.flatten
-      new(opts.map { |o| Option.new(o) })
-    else
-      raise TypeError, "Cannot convert #{arg.inspect} to Options"
-    end
+  def inspect
+    "#<#{self.class.name}: #{to_a.inspect}>"
   end
 end

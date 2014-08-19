@@ -1,4 +1,6 @@
-module Homebrew extend self
+require "metafiles"
+
+module Homebrew
   def list
 
     # Use of exec means we don't explicitly exit
@@ -9,7 +11,6 @@ module Homebrew extend self
     return unless HOMEBREW_CELLAR.exist?
 
     if ARGV.include? '--pinned'
-      require 'formula'
       list_pinned
     elsif ARGV.include? '--versions'
       list_versions
@@ -17,7 +18,7 @@ module Homebrew extend self
       ENV['CLICOLOR'] = nil
       exec 'ls', *ARGV.options_only << HOMEBREW_CELLAR
     elsif ARGV.verbose? or not $stdout.tty?
-      exec "find", *ARGV.kegs + %w[-not -type d -print]
+      exec "find", *ARGV.kegs.map(&:to_s) + %w[-not -type d -print]
     else
       ARGV.kegs.each{ |keg| PrettyListing.new keg }
     end
@@ -25,40 +26,57 @@ module Homebrew extend self
 
   private
 
+  UNBREWED_EXCLUDE_FILES = %w[.DS_Store]
+  UNBREWED_EXCLUDE_PATHS = %w[
+    bin/brew
+    lib/gdk-pixbuf-2.0/*
+    lib/gio/*
+    lib/node_modules/*
+    lib/python[23].[0-9]/*
+    share/info/dir
+    share/man/man1/brew.1
+    share/man/whatis
+  ]
+
   def list_unbrewed
-    dirs = HOMEBREW_PREFIX.children.select{ |pn| pn.directory? }.map{ |pn| pn.basename.to_s }
+    dirs  = HOMEBREW_PREFIX.subdirs.map { |dir| dir.basename.to_s }
     dirs -= %w[Library Cellar .git]
 
-    # Exclude the cache, if it has been located under the prefix
-    cache_folder = (HOMEBREW_CACHE.relative_path_from(HOMEBREW_PREFIX)).to_s
-    dirs -= [cache_folder]
+    # Exclude the repository and cache, if they are located under the prefix
+    dirs.delete HOMEBREW_CACHE.relative_path_from(HOMEBREW_PREFIX).to_s
+    dirs.delete HOMEBREW_REPOSITORY.relative_path_from(HOMEBREW_PREFIX).to_s
+    dirs.delete 'etc'
+    dirs.delete 'var'
 
-    # Exclude the repository, if it has been located under the prefix
-    cache_folder = (HOMEBREW_REPOSITORY.relative_path_from(HOMEBREW_PREFIX)).to_s
-    dirs -= [cache_folder]
+    args = dirs + %w[-type f (]
+    args.concat UNBREWED_EXCLUDE_FILES.map { |f| %W[! -name #{f}] }.flatten
+    args.concat UNBREWED_EXCLUDE_PATHS.map { |d| %W[! -path #{d}] }.flatten
+    args.concat %w[)]
 
     cd HOMEBREW_PREFIX
-    exec 'find', *dirs + %w[-type f ( ! -iname .ds_store ! -iname brew ! -iname brew-man.1 ! -iname brew.1 )]
+    exec 'find', *args
   end
 
   def list_versions
     if ARGV.named.empty?
-      HOMEBREW_CELLAR.children.select{ |pn| pn.directory? }
+      HOMEBREW_CELLAR.subdirs
     else
       ARGV.named.map{ |n| HOMEBREW_CELLAR+n }.select{ |pn| pn.exist? }
     end.each do |d|
-      versions = d.children.select{ |pn| pn.directory? }.map{ |pn| pn.basename.to_s }
+      versions = d.subdirs.map { |pn| pn.basename.to_s }
+      next if ARGV.include?('--multiple') && versions.count < 2
       puts "#{d.basename} #{versions*' '}"
     end
   end
 
   def list_pinned
     if ARGV.named.empty?
-      HOMEBREW_CELLAR.children.select{ |pn| pn.directory? }
+      HOMEBREW_CELLAR.subdirs
     else
       ARGV.named.map{ |n| HOMEBREW_CELLAR+n }.select{ |pn| pn.exist? }
     end.select do |d|
-      (HOMEBREW_LIBRARY/"PinnedKegs"/d.basename.to_s).exist?
+      keg_pin = (HOMEBREW_LIBRARY/"PinnedKegs"/d.basename.to_s)
+      keg_pin.exist? or keg_pin.symlink?
     end.each do |d|
       puts d.basename
     end
@@ -67,7 +85,7 @@ end
 
 class PrettyListing
   def initialize path
-    Pathname.new(path).children.sort{ |a,b| a.to_s.downcase <=> b.to_s.downcase }.each do |pn|
+    Pathname.new(path).children.sort_by { |p| p.to_s.downcase }.each do |pn|
       case pn.basename.to_s
       when 'bin', 'sbin'
         pn.find { |pnn| puts pnn unless pnn.directory? }
@@ -83,7 +101,7 @@ class PrettyListing
           else
             print_dir pn
           end
-        elsif FORMULA_META_FILES.should_list? pn.basename.to_s
+        elsif Metafiles.list?(pn.basename.to_s)
           puts pn
         end
       end

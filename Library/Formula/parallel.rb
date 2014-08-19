@@ -1,12 +1,12 @@
-require 'formula'
+require "formula"
 
 class Parallel < Formula
-  homepage 'http://savannah.gnu.org/projects/parallel/'
-  url 'http://ftpmirror.gnu.org/parallel/parallel-20130422.tar.bz2'
-  mirror 'http://ftp.gnu.org/gnu/parallel/parallel-20130422.tar.bz2'
-  sha256 '3090bb1ce3d56fe8c844a6ba4faa2ada69554f50c2ec46bdcd5d382d9a61cf2b'
+  homepage "http://savannah.gnu.org/projects/parallel/"
+  url "http://ftpmirror.gnu.org/parallel/parallel-20140722.tar.bz2"
+  mirror "http://ftp.gnu.org/gnu/parallel/parallel-20140722.tar.bz2"
+  sha256 "b6e0b8be4f15ea9f451b6a742e914aaa234a9008946aae151aff107a2172bb98"
 
-  conflicts_with 'moreutils',
+  conflicts_with "moreutils",
     :because => "both install a 'parallel' executable."
 
   def install

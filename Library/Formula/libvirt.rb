@@ -2,8 +2,14 @@ require 'formula'
 
 class Libvirt < Formula
   homepage 'http://www.libvirt.org'
-  url 'http://libvirt.org/sources/libvirt-1.0.5.tar.gz'
-  sha256 '337f1cd6611462b6e3cdf94541c49477df678074321fb7923274e4e30398209f'
+  url 'http://libvirt.org/sources/libvirt-1.2.7.tar.gz'
+  sha256 '3dfb462cba1188d2c9ba700e1927fa0dbd71f20afdf81ab0c43b27b7fe77defc'
+
+  bottle do
+    sha1 "17a888701564a3a24a150d4211c0b5d0b7ad4347" => :mavericks
+    sha1 "d6162583eddab3ed31d9fae315d08063a0002000" => :mountain_lion
+    sha1 "f0e1c538178be839fa5949304d50accfe4368d32" => :lion
+  end
 
   option 'without-libvirtd', 'Build only the virsh client and development libraries'
 
@@ -12,7 +18,7 @@ class Libvirt < Formula
   depends_on 'libgcrypt'
   depends_on 'yajl'
 
-  if MacOS.version == :leopard
+  if MacOS.version <= :leopard
     # Definitely needed on Leopard, but not on Snow Leopard.
     depends_on "readline"
     depends_on "libxml2"
@@ -37,7 +43,7 @@ class Libvirt < Formula
             "--with-yajl",
             "--without-qemu"]
 
-    args << "--without-libvirtd" if build.include? 'without-libvirtd'
+    args << "--without-libvirtd" if build.without? 'libvirtd'
 
     system "./configure", *args
 
@@ -52,7 +58,7 @@ class Libvirt < Formula
 
     # If the libvirt daemon is built, update its config file to reflect
     # the Homebrew prefix
-    unless build.include? 'without-libvirtd'
+    if build.with? "libvirtd"
       inreplace "#{etc}/libvirt/libvirtd.conf" do |s|
         s.gsub! "/etc/", "#{HOMEBREW_PREFIX}/etc/"
         s.gsub! "/var/", "#{HOMEBREW_PREFIX}/var/"

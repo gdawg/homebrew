@@ -2,42 +2,43 @@ require 'formula'
 
 class Graphviz < Formula
   homepage 'http://graphviz.org/'
-  url 'http://www.graphviz.org/pub/graphviz/stable/SOURCES/graphviz-2.30.1.tar.gz'
-  sha1 '96739220c4bbcf1bd3bd52e7111f4e60497185c6'
+  url 'http://graphviz.org/pub/graphviz/stable/SOURCES/graphviz-2.38.0.tar.gz'
+  sha1 '053c771278909160916ca5464a0a98ebf034c6ef'
 
-  devel do
-    url 'http://www.graphviz.org/pub/graphviz/development/SOURCES/graphviz-2.31.20130502.2155.tar.gz'
-    sha1 'df9d2bb8788ad3266a1ab6a7fb6d0237bde5e28a'
+  bottle do
+    sha1 "112471c5d0e25a953ae64c09db48f434e744f558" => :mavericks
+    sha1 "7dcc9f76ce2b8978a77d114354471c7c931a4b54" => :mountain_lion
+    sha1 "9effcb470b301098a54566f6d335f2eee6491d71" => :lion
   end
 
+  # To find Ruby and Co.
   env :std
 
   option :universal
   option 'with-bindings', 'Build Perl/Python/Ruby/etc. bindings'
   option 'with-pangocairo', 'Build with Pango/Cairo for alternate PDF output'
-  option 'with-freetype', 'Build with FreeType support'
   option 'with-x', 'Build with X11 support'
   option 'with-app', 'Build GraphViz.app (requires full XCode install)'
   option 'with-gts', 'Build with GNU GTS support (required by prism)'
 
-  depends_on :libpng
+  depends_on "libpng"
 
   depends_on 'pkg-config' => :build
-  depends_on 'pango' if build.include? 'with-pangocairo'
-  depends_on 'swig' if build.include? 'with-bindings'
-  depends_on 'gts' if build.include? 'with-gts'
-  depends_on :freetype if build.include? 'with-freetype' or MacOS::X11.installed?
-  depends_on :x11 if build.include? 'with-x' or MacOS::X11.installed?
-  depends_on :xcode if build.include? 'with-app'
+  depends_on 'pango' if build.with? "pangocairo"
+  depends_on 'swig' if build.with? "bindings"
+  depends_on 'gts' => :optional
+  depends_on "librsvg" => :optional
+  depends_on "freetype" => :optional
+  depends_on :x11 if build.with? "x"
+  depends_on :xcode => :build if build.with? "app"
 
   fails_with :clang do
     build 318
   end
 
-  def patches
-    {:p0 =>
-      "https://trac.macports.org/export/103168/trunk/dports/graphics/graphviz/files/patch-project.pbxproj.diff",
-     }
+  patch :p0 do
+    url "https://trac.macports.org/export/103168/trunk/dports/graphics/graphviz/files/patch-project.pbxproj.diff"
+    sha1 "b242fb8fa81489dd16830e5df6bbf5448a3874d5"
   end
 
   def install
@@ -47,19 +48,19 @@ class Graphviz < Formula
             "--prefix=#{prefix}",
             "--without-qt",
             "--with-quartz"]
-    args << "--with-gts" if build.include? 'with-gts'
-    args << "--disable-swig" unless build.include? 'with-bindings'
-    args << "--without-pangocairo" unless build.include? 'with-pangocairo'
-    args << "--without-freetype2" unless build.include? 'with-freetype' or MacOS::X11.installed?
-    args << "--without-x" unless build.include? 'with-x' or MacOS::X11.installed?
+    args << "--with-gts" if build.with? 'gts'
+    args << "--disable-swig" if build.without? "bindings"
+    args << "--without-pangocairo" if build.without? "pangocairo"
+    args << "--without-freetype2" if build.without? "freetype"
+    args << "--without-x" if build.without? "x"
+    args << "--without-rsvg" if build.without? "librsvg"
 
     system "./configure", *args
     system "make install"
 
-    if build.include? 'with-app'
-      # build Graphviz.app
+    if build.with? "app"
       cd "macosx" do
-        system "xcodebuild", "-configuration", "Release", "SYMROOT=build", "PREFIX=#{prefix}", "ONLY_ACTIVE_ARCH=YES"
+        xcodebuild "-configuration", "Release", "SYMROOT=build", "PREFIX=#{prefix}", "ONLY_ACTIVE_ARCH=YES"
       end
       prefix.install "macosx/build/Release/Graphviz.app"
     end
@@ -75,17 +76,5 @@ class Graphviz < Formula
     EOS
 
     system "#{bin}/dot", "-Tpdf", "-o", "sample.pdf", "sample.dot"
-  end
-
-  def caveats
-    if build.include? 'with-app'
-      <<-EOS
-        Graphviz.app was installed in:
-          #{prefix}
-
-        To symlink into ~/Applications, you can do:
-          brew linkapps
-        EOS
-    end
   end
 end

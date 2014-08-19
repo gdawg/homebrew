@@ -2,12 +2,11 @@ require 'formula'
 
 class Mksh < Formula
   homepage 'https://mirbsd.org/mksh.htm'
-  url 'https://mirbsd.org/MirOS/dist/mir/mksh/mksh-R45.tgz'
-  version '45.1'
-  sha256 '90137336a836ad180c6e4f84065b993414aacb2e954afeac506cefb51d432cb8'
+  url 'http://mirbsd.org/MirOS/dist/mir/mksh/mksh-R49.tgz'
+  sha1 '06b9d0162d1f91ff28d3fa66533e67edb168694d'
 
   def install
-    system "sh", "./Build.sh", "-c", (ENV.compiler == :clang ? "lto" : "combine")
+    system "sh", "./Build.sh", "-r", "-c", (ENV.compiler == :clang ? "lto" : "combine")
     bin.install 'mksh'
     man1.install 'mksh.1'
   end

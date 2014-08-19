@@ -3,7 +3,7 @@ require 'formula'
 class Torsocks < Formula
   homepage 'https://gitweb.torproject.org/torsocks.git/'
   url 'https://git.torproject.org/torsocks.git', :tag => '1.3'
-  version '1.3'
+
   head 'https://git.torproject.org/torsocks.git', :branch => 'master'
 
   depends_on :autoconf
@@ -18,7 +18,7 @@ class Torsocks < Formula
     system "make install"
   end
 
-  def test
+  test do
     system "#{bin}/torsocks"
   end
 end
