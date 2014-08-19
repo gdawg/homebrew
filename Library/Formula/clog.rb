@@ -17,7 +17,7 @@ class Clog < Formula
   end
 
   test do
-    echo "not broken" | clog
+    `echo "not broken" | clog`
   end
 
 end
